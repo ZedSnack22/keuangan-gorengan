@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ff8a00">
+<link rel="manifest" href="manifest.json">
+<title>Keuangan Gorengan</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f6f8;font-family:Arial,sans-serif;color:#222}
+header{background:#ff8a00;color:white;padding:22px 16px;border-radius:0 0 22px 22px}
+main{max-width:650px;margin:auto;padding:14px}.card{background:#fff;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 2px 10px #0001}
+h1{margin:0;font-size:23px}h2{font-size:17px;margin:0 0 12px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.box{background:#f7f7f7;padding:14px;border-radius:12px}.box small{display:block;color:#666;margin-bottom:5px}
+.income{color:#17823a}.expense{color:#c62828}.profit{color:#075ec7;font-weight:bold}
+button,input,select{font:inherit}button{border:0;border-radius:11px;padding:12px;font-weight:bold}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}.inc{background:#dff7e7;color:#176d32}.exp{background:#ffe1e1;color:#b21f1f}
+.primary{background:#ff8a00;color:white}.gray{background:#eee}.danger{background:#ffe8e8;color:#b00;width:100%}
+input,select{width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;margin:5px 0 10px}
+label{font-size:13px;color:#555}.hidden{display:none}.tx{display:flex;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid #eee}
+.tx:last-child{border:0}.tx small{color:#777}.right{text-align:right}.del{padding:2px;background:none;color:#b00;font-size:12px}
+.empty{text-align:center;color:#888;padding:18px}.backup{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+</style>
+</head>
+<body>
+<header><main><h1>🍌 Keuangan Gorengan</h1><div>Catatan jualan & pengeluaran</div></main></header>
+<main>
+<section class="card"><h2>📊 Hari Ini</h2><div class="grid">
+<div class="box"><small>Pendapatan</small><b class="income" id="di">Rp0</b></div>
+<div class="box"><small>Pengeluaran</small><b class="expense" id="de">Rp0</b></div>
+<div class="box" style="grid-column:1/-1"><small>Laba Bersih</small><span class="profit" id="dp">Rp0</span></div>
+</div></section>
+
+<section class="card"><div class="btns">
+<button class="inc" onclick="openForm('income')">＋ Pendapatan</button>
+<button class="exp" onclick="openForm('expense')">− Pengeluaran</button>
+</div>
+<div id="form" class="hidden" style="margin-top:14px">
+<h2 id="ft">Tambah</h2>
+<label>Tanggal</label><input id="date" type="date">
+<label>Keterangan</label><input id="note" placeholder="Contoh: jualan pagi">
+<label>Kategori</label><select id="cat"></select>
+<label>Jumlah (Rp)</label><input id="amount" type="number" inputmode="numeric" placeholder="50000">
+<div class="btns"><button class="primary" onclick="saveTx()">Simpan</button><button class="gray" onclick="closeForm()">Batal</button></div>
+</div></section>
+
+<section class="card"><h2>📅 Rekap Bulanan</h2><input id="month" type="month">
+<div class="grid">
+<div class="box"><small>Pendapatan</small><b class="income" id="mi">Rp0</b></div>
+<div class="box"><small>Pengeluaran</small><b class="expense" id="me">Rp0</b></div>
+<div class="box" style="grid-column:1/-1"><small>Laba Bersih</small><b class="profit" id="mp">Rp0</b></div>
+</div></section>
+
+<section class="card"><h2>🧾 Riwayat</h2><div id="history"></div></section>
+
+<section class="card"><h2>💾 Keamanan Data</h2>
+<p style="font-size:13px;color:#666">Gunakan Backup secara berkala. File backup dapat dipakai untuk memulihkan catatan di HP/browser lain.</p>
+<div class="backup"><button class="primary" onclick="backup()">📤 Backup</button><button class="gray" onclick="document.getElementById('restore').click()">📥 Pulihkan</button></div>
+<input id="restore" type="file" accept=".json,application/json" class="hidden" onchange="restore(event)">
+<br><button class="danger" onclick="clearAll()">Hapus Semua Data</button>
+</section>
+</main>
+<script>
+const DB='GorenganDB', STORE='transactions';let db,kind='income';
+const incomeCats=['Penjualan gorengan','Penjualan minuman','Lainnya'];
+const expenseCats=['Bahan baku','Minyak','Gas','Kemasan','Transportasi','Listrik/Air','Peralatan','Lainnya'];
+const rp=n=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n);
+const today=()=>new Date().toISOString().slice(0,10);
+function initDB(){return new Promise((res,rej)=>{let r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE,{keyPath:'id',autoIncrement:true});r.onsuccess=()=>{db=r.result;res()};r.onerror=()=>rej(r.error)})}
+function all(){return new Promise((res,rej)=>{let r=db.transaction(STORE).objectStore(STORE).getAll();r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+function add(x){return new Promise((res,rej)=>{let r=db.transaction(STORE,'readwrite').objectStore(STORE).add(x);r.onsuccess=res;r.onerror=()=>rej(r.error)})}
+function del(id){return new Promise((res,rej)=>{let r=db.transaction(STORE,'readwrite').objectStore(STORE).delete(id);r.onsuccess=res;r.onerror=()=>rej(r.error)})}
+function openForm(k){kind=k;form.classList.remove('hidden');ft.textContent=k==='income'?'Tambah Pendapatan':'Tambah Pengeluaran';cat.innerHTML=(k==='income'?incomeCats:expenseCats).map(x=>`<option>${x}</option>`).join('');date.value=today();note.value='';amount.value=''}
+function closeForm(){form.classList.add('hidden')}
+async function saveTx(){let a=Number(amount.value),n=note.value.trim();if(!date.value||!n||a<=0)return alert('Lengkapi data terlebih dahulu.');await add({date:date.value,note:n,category:cat.value,amount:a,type:kind,created:Date.now()});closeForm();render()}
+async function render(){let xs=await all(),m=month.value,d=today();let sum=l=>{let i=l.filter(x=>x.type==='income').reduce((a,x)=>a+x.amount,0),e=l.filter(x=>x.type==='expense').reduce((a,x)=>a+x.amount,0);return[i,e,i-e]};
+let t=sum(xs.filter(x=>x.date===d)),z=sum(xs.filter(x=>x.date.startsWith(m)));di.textContent=rp(t[0]);de.textContent=rp(t[1]);dp.textContent=rp(t[2]);mi.textContent=rp(z[0]);me.textContent=rp(z[1]);mp.textContent=rp(z[2]);
+xs.sort((a,b)=>b.created-a.created);history.innerHTML=xs.length?xs.map(x=>`<div class="tx"><div><b>${esc(x.note)}</b><br><small>${x.date} · ${esc(x.category)}</small></div><div class="right"><b class="${x.type==='income'?'income':'expense'}">${x.type==='income'?'+':'-'} ${rp(x.amount)}</b><br><button class="del" onclick="removeTx(${x.id})">Hapus</button></div></div>`).join(''):'<div class="empty">Belum ada transaksi.</div>'}
+async function removeTx(id){if(confirm('Hapus transaksi ini?')){await del(id);render()}}
+function esc(s){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+async function backup(){let data=await all();let blob=new Blob([JSON.stringify({version:1,exported:new Date().toISOString(),transactions:data},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='backup-keuangan-gorengan.json';a.click();URL.revokeObjectURL(a.href)}
+async function restore(e){let f=e.target.files[0];if(!f)return;try{let o=JSON.parse(await f.text());if(!Array.isArray(o.transactions))throw 0;let old=await all();for(let x of old)await del(x.id);for(let x of o.transactions){let y={date:x.date,note:x.note,category:x.category,amount:Number(x.amount),type:x.type,created:x.created||Date.now()};await add(y)}alert('Data berhasil dipulihkan.');render()}catch(err){alert('File backup tidak valid.')}e.target.value=''}
+async function clearAll(){if(confirm('Semua catatan akan dihapus. Lanjutkan?')){for(let x of await all())await del(x.id);render()}}
+(async()=>{await initDB();date.value=today();month.value=today().slice(0,7);month.onchange=render;await render()})()
+</script>
+</body></html>
