@@ -83,4 +83,9 @@ async function restore(e){let f=e.target.files[0];if(!f)return;try{let o=JSON.pa
 async function clearAll(){if(confirm('Semua catatan akan dihapus. Lanjutkan?')){for(let x of await all())await del(x.id);render()}}
 (async()=>{await initDB();date.value=today();month.value=today().slice(0,7);month.onchange=render;await render()})()
 </script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js"));
+}
+</script>
 </body></html>
