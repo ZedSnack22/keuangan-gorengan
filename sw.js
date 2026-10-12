@@ -1,4 +1,4 @@
-const CACHE = "zed-flows-v3";
+const CACHE = "zed-flows-v4";
 const ASSETS = ["./", "./index.html", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", event => {
